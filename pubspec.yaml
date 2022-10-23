@@ -1,0 +1,13 @@
+name: object_3d
+description: Simple Flutter renderer for .obj files
+version: 0.0.1
+homepage: github.com/arnovanliere/object_3d
+
+environment:
+  sdk: '>=2.18.2 <3.0.0'
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  vector_math: ^2.1.2

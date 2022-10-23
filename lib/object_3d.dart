@@ -1,4 +1,5 @@
 library object_3d;
+
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -15,9 +16,9 @@ class Object3D extends StatefulWidget {
     this.object,
     this.path,
   })  : assert(object != null || path != null,
-  'You must provide an object or a path'),
+            'You must provide an object or a path'),
         assert(object == null || path == null,
-        'You must provide an object or a path, not both');
+            'You must provide an object or a path, not both');
 
   final Size size;
   final String? path;
@@ -261,11 +262,11 @@ class _ObjectPainter extends CustomPainter {
   @override
   bool shouldRepaint(_ObjectPainter old) =>
       old.vertices != vertices ||
-          old.faces != faces ||
-          old.angleX != angleX ||
-          old.angleY != angleY ||
-          old.angleZ != angleZ ||
-          old.zoom != zoom;
+      old.faces != faces ||
+      old.angleX != angleX ||
+      old.angleY != angleY ||
+      old.angleZ != angleZ ||
+      old.zoom != zoom;
 }
 
 class AvgZ {

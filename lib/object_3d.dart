@@ -80,21 +80,23 @@ class _Object3DState extends State<Object3D> {
 
   /// Update the angle of rotation based on the change in position.
   void _updateCube(DragUpdateDetails data) {
-    _angleY %= 360.0;
-    if (_previousY > data.globalPosition.dx) {
-      setState(() => _angleY = _angleY - 1);
-    } else {
-      setState(() => _angleY = _angleY + 1);
-    }
-    _previousY = data.globalPosition.dx;
+    setState(() {
+      _angleY %= 360.0;
+      if (_previousY > data.globalPosition.dx) {
+        _angleY = _angleY - 1;
+      } else {
+        _angleY = _angleY + 1;
+      }
+      _previousY = data.globalPosition.dx;
 
-    _angleX %= 360.0;
-    if (_previousX > data.globalPosition.dy) {
-      setState(() => _angleX = _angleX - 1);
-    } else {
-      setState(() => _angleX = _angleX + 1);
-    }
-    _previousX = data.globalPosition.dy;
+      _angleX %= 360.0;
+      if (_previousX > data.globalPosition.dy) {
+        _angleX = _angleX - 1;
+      } else {
+        _angleX = _angleX + 1;
+      }
+      _previousX = data.globalPosition.dy;
+    });
   }
 
   @override

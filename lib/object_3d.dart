@@ -58,8 +58,12 @@ class _Object3DState extends State<Object3D> {
       _parseObj(widget.object!);
     }
 
-    final double maxSpeed = widget.maxSpeed.abs();
-    final double dampCoef = widget.dampCoef.clamp(0.001, 0.999);
+    assert(widget.swipeCoef > 0,
+        "Parameter swipeCoef must be a positive, non-zero real number.");
+    assert(widget.dampCoef >= 0.001 && widget.dampCoef <= 0.999,
+        "Parameter dampCoef must be in the range [0.001, 0.999].");
+    assert(widget.maxSpeed > 0,
+        "Parameter maxSpeed must be positive, non-zero real number.");
 
     _updateTimer = Timer.periodic(Duration(milliseconds: 16), (_) {
       if (!mounted) return;
@@ -69,8 +73,8 @@ class _Object3DState extends State<Object3D> {
         final sx = _deltaX < 0 ? -1 : 1;
         final sy = _deltaY < 0 ? -1 : 1;
 
-        _deltaX = math.min(maxSpeed, adx) * sx * dampCoef;
-        _deltaY = math.min(maxSpeed, ady) * sy * dampCoef;
+        _deltaX = math.min(widget.maxSpeed, adx) * sx * widget.dampCoef;
+        _deltaY = math.min(widget.maxSpeed, ady) * sy * widget.dampCoef;
 
         _yaw = _yaw - (_deltaX * (widget.reversePitch ? -1 : 1));
         _pitch = _pitch - (_deltaY * (widget.reverseYaw ? -1 : 1));
@@ -92,12 +96,12 @@ class _Object3DState extends State<Object3D> {
     List<List<int>> faces = [];
     final lines = obj.split("\n");
     for (String line in lines) {
-      const _space = " ";
-      line = line.replaceAll(RegExp(r"\s+"), _space);
+      const space = " ";
+      line = line.replaceAll(RegExp(r"\s+"), space);
 
       // Split into tokens and drop empty tokens
       final List<String> chars =
-          line.split(_space).where((v) => v.isNotEmpty).toList(growable: false);
+          line.split(space).where((v) => v.isNotEmpty).toList(growable: false);
 
       if (chars.isEmpty) continue;
 

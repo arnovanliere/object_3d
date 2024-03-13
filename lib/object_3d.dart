@@ -19,6 +19,8 @@ class Object3D extends StatefulWidget {
     this.swipeCoef = 0.1,
     this.dampCoef = 0.92,
     this.maxSpeed = 10.0,
+    this.reversePitch = true,
+    this.reverseYaw = false,
   })  : assert(object != null || path != null,
             'You must provide an object or a path'),
         assert(object == null || path == null,
@@ -31,6 +33,8 @@ class Object3D extends StatefulWidget {
   final double swipeCoef; // pan delta intensity
   final double dampCoef; // psuedo-friction 0.001-0.999
   final double maxSpeed; // in rots per 16 ms
+  final bool reversePitch; // if true, rotation direction is flipped for pitch
+  final bool reverseYaw; // if true, rotation direction is flipped for yaw
 
   @override
   State<Object3D> createState() => _Object3DState();
@@ -60,20 +64,26 @@ class _Object3DState extends State<Object3D> {
     _updateTimer = Timer.periodic(Duration(milliseconds: 16), (_) {
       if (!mounted) return;
       setState(() {
-        final double adx = _deltaX.abs();
-        final double ady = _deltaY.abs();
-        final double sx = _deltaX < 0 ? -1 : 1;
-        final double sy = _deltaY < 0 ? -1 : 1;
+        final adx = _deltaX.abs();
+        final ady = _deltaY.abs();
+        final sx = _deltaX < 0 ? -1 : 1;
+        final sy = _deltaY < 0 ? -1 : 1;
 
         _deltaX = math.min(maxSpeed, adx) * sx * dampCoef;
         _deltaY = math.min(maxSpeed, ady) * sy * dampCoef;
 
-        _yaw = _yaw - _deltaX;
-        _pitch = _pitch - _deltaY;
+        _yaw = _yaw - (_deltaX * (widget.reversePitch ? -1 : 1));
+        _pitch = _pitch - (_deltaY * (widget.reverseYaw ? -1 : 1));
       });
     });
 
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _updateTimer.cancel();
   }
 
   /// Parse the object file.
@@ -82,10 +92,15 @@ class _Object3DState extends State<Object3D> {
     List<List<int>> faces = [];
     final lines = obj.split("\n");
     for (String line in lines) {
-      line = line.replaceAll(RegExp(r"\s+"), " ");
-      List<String> chars = line.split(" ");
-      if (chars[0] == "v") {
-        try {
+      const _space = " ";
+      line = line.replaceAll(RegExp(r"s+"), _space);
+
+      // Split into tokens and drop empty tokens
+      List<String> chars =
+          line.split(_space).skipWhile((v) => v.isEmpty).toList();
+
+      try {
+        if (chars[0] == "v") {
           vertices.add(
             Vector3(
               double.parse(chars[1]),
@@ -93,15 +108,15 @@ class _Object3DState extends State<Object3D> {
               double.parse(chars[3]),
             ),
           );
-        } catch (e) {
-          print(e);
+        } else if (chars[0] == "f") {
+          List<int> face = [];
+          for (int i = 1; i < chars.length; i++) {
+            face.add(int.parse(chars[i].split("/")[0]));
+          }
+          faces.add(face);
         }
-      } else if (chars[0] == "f") {
-        List<int> face = [];
-        for (int i = 1; i < chars.length; i++) {
-          face.add(int.parse(chars[i].split("/")[0]));
-        }
-        faces.add(face);
+      } catch (e) {
+        print(e);
       }
     }
     setState(() {
@@ -213,11 +228,11 @@ class _ObjectPainter extends CustomPainter {
     for (int i = 0; i < face.length; i++) {
       double x, y;
       if (i < face.length - 1) {
-        final Vector3 iV = vertices[face[i + 1] - 1];
+        final iV = vertices[face[i + 1] - 1];
         x = iV.x.toDouble();
         y = iV.y.toDouble();
       } else {
-        final Vector3 iV = vertices[face[0] - 1];
+        final iV = vertices[face[0] - 1];
         x = iV.x.toDouble();
         y = iV.y.toDouble();
       }

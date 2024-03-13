@@ -2,6 +2,7 @@ library object_3d;
 
 import 'dart:math' as math;
 import 'dart:ui';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,9 @@ class Object3D extends StatefulWidget {
     this.color = Colors.white,
     this.object,
     this.path,
+    this.swipeCoef = 0.1,
+    this.dampCoef = 0.92,
+    this.maxSpeed = 10.0,
   })  : assert(object != null || path != null,
             'You must provide an object or a path'),
         assert(object == null || path == null,
@@ -24,17 +28,21 @@ class Object3D extends StatefulWidget {
   final String? path;
   final String? object;
   final Color color;
+  final double swipeCoef; // pan delta intensity
+  final double dampCoef; // psuedo-friction 0.001-0.999
+  final double maxSpeed; // in rots per 16 ms
 
   @override
   State<Object3D> createState() => _Object3DState();
 }
 
 class _Object3DState extends State<Object3D> {
-  double _angleX = 15.0, _angleY = 45.0;
-  double _previousX = 0.0, _previousY = 0.0;
-
+  double _pitch = 15.0, _yaw = 45.0;
+  double? _previousX, _previousY;
+  double _deltaX = 0.0, _deltaY = 0.0;
   List<Vector3> vertices = [];
   List<List<int>> faces = [];
+  late Timer _updateTimer;
 
   @override
   void initState() {
@@ -45,6 +53,29 @@ class _Object3DState extends State<Object3D> {
       // Load the object from a string
       _parseObj(widget.object!);
     }
+
+    final double maxSpeed = widget.maxSpeed.abs();
+    final double dampCoef = widget.dampCoef.clamp(0.001, 0.999);
+
+    _updateTimer = Timer.periodic(Duration(milliseconds: 16), (_) {
+      if (!mounted) return;
+      setState(() {
+        final double adx = _deltaX.abs();
+        final double ady = _deltaY.abs();
+        final double sx = _deltaX < 0 ? -1 : 1;
+        final double sy = _deltaY < 0 ? -1 : 1;
+
+        _deltaX = math.min(maxSpeed, adx) * sx;
+        _deltaY = math.min(maxSpeed, ady) * sy;
+
+        _deltaX *= dampCoef;
+        _deltaY *= dampCoef;
+
+        _yaw = _yaw - _deltaX;
+        _pitch = _pitch - _deltaY;
+      });
+    });
+
     super.initState();
   }
 
@@ -53,20 +84,24 @@ class _Object3DState extends State<Object3D> {
     List<Vector3> vertices = [];
     List<List<int>> faces = [];
     final lines = obj.split("\n");
-    for (var line in lines) {
-      line = line.replaceAll(RegExp(r"\s+$"), "");
+    for (String line in lines) {
+      line = line.replaceAll(RegExp(r"\s+"), " ");
       List<String> chars = line.split(" ");
       if (chars[0] == "v") {
-        vertices.add(
-          Vector3(
-            double.parse(chars[1]),
-            double.parse(chars[2]),
-            double.parse(chars[3]),
-          ),
-        );
+        try {
+          vertices.add(
+            Vector3(
+              double.parse(chars[1]),
+              double.parse(chars[2]),
+              double.parse(chars[3]),
+            ),
+          );
+        } catch (e) {
+          print(e);
+        }
       } else if (chars[0] == "f") {
         List<int> face = [];
-        for (var i = 1; i < chars.length; i++) {
+        for (int i = 1; i < chars.length; i++) {
           face.add(int.parse(chars[i].split("/")[0]));
         }
         faces.add(face);
@@ -79,42 +114,40 @@ class _Object3DState extends State<Object3D> {
   }
 
   /// Update the angle of rotation based on the change in position.
-  void _updateCube(DragUpdateDetails data) {
-    setState(() {
-      _angleY %= 360.0;
-      if (_previousY > data.globalPosition.dx) {
-        _angleY = _angleY - 1;
-      } else {
-        _angleY = _angleY + 1;
-      }
-      _previousY = data.globalPosition.dx;
+  void _handlePanDelta(DragUpdateDetails data) {
+    if (_previousY != null) {
+      _deltaY += widget.swipeCoef * (_previousY! - data.globalPosition.dy);
+    }
+    _previousY = data.globalPosition.dy;
 
-      _angleX %= 360.0;
-      if (_previousX > data.globalPosition.dy) {
-        _angleX = _angleX - 1;
-      } else {
-        _angleX = _angleX + 1;
-      }
-      _previousX = data.globalPosition.dy;
-    });
+    if (_previousX != null) {
+      _deltaX += widget.swipeCoef * (_previousX! - data.globalPosition.dx);
+    }
+    _previousX = data.globalPosition.dx;
+  }
+
+  // invalidates _previousX and _previousY
+  void _handlePanEnd(DragEndDetails _) {
+    _previousX = null;
+    _previousY = null;
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onHorizontalDragUpdate: _updateCube,
-      onVerticalDragUpdate: _updateCube,
+      onPanUpdate: _handlePanDelta,
+      onPanEnd: _handlePanEnd,
       child: CustomPaint(
         size: widget.size,
         painter: _ObjectPainter(
           size: widget.size,
-          angleX: _angleX,
-          angleY: _angleY,
-          angleZ: 0,
+          pitch: _pitch,
+          yaw: _yaw,
+          roll: 0,
           vertices: vertices,
           color: widget.color,
           faces: faces,
-          zoom: 100,
+          zoom: 200,
         ),
       ),
     );
@@ -123,7 +156,7 @@ class _Object3DState extends State<Object3D> {
 
 class _ObjectPainter extends CustomPainter {
   final Size size;
-  final double zoom, angleX, angleY, angleZ;
+  final double zoom, pitch, yaw, roll;
   late final double _viewPortX = size.width / 2;
   late final double _viewPortY = size.height / 2;
 
@@ -137,9 +170,9 @@ class _ObjectPainter extends CustomPainter {
 
   _ObjectPainter({
     required this.size,
-    required this.angleX,
-    required this.angleY,
-    required this.angleZ,
+    required this.pitch,
+    required this.yaw,
+    required this.roll,
     required this.vertices,
     required this.color,
     required this.faces,
@@ -166,9 +199,9 @@ class _ObjectPainter extends CustomPainter {
   Vector3 _calcVertex(Vector3 vertex) {
     final t = v.Matrix4.translationValues(_viewPortX, _viewPortY, 0);
     t.scale(zoom, -zoom);
-    t.rotateX(_degreeToRadian(angleX));
-    t.rotateY(_degreeToRadian(angleY));
-    t.rotateZ(_degreeToRadian(angleZ));
+    t.rotateX(_degreeToRadian(pitch));
+    t.rotateY(_degreeToRadian(yaw));
+    t.rotateZ(_degreeToRadian(roll));
     return t.transform3(vertex);
   }
 
@@ -183,11 +216,13 @@ class _ObjectPainter extends CustomPainter {
     for (int i = 0; i < face.length; i++) {
       double x, y;
       if (i < face.length - 1) {
-        x = vertices[face[i + 1] - 1].x.toDouble();
-        y = vertices[face[i + 1] - 1].y.toDouble();
+        final Vector3 iV = vertices[face[i + 1] - 1];
+        x = iV.x.toDouble();
+        y = iV.y.toDouble();
       } else {
-        x = vertices[face[0] - 1].x.toDouble();
-        y = vertices[face[0] - 1].y.toDouble();
+        final Vector3 iV = vertices[face[0] - 1];
+        x = iV.x.toDouble();
+        y = iV.y.toDouble();
       }
       coordinates.add(Offset(x, y));
     }
@@ -265,9 +300,9 @@ class _ObjectPainter extends CustomPainter {
   bool shouldRepaint(_ObjectPainter old) =>
       old.vertices != vertices ||
       old.faces != faces ||
-      old.angleX != angleX ||
-      old.angleY != angleY ||
-      old.angleZ != angleZ ||
+      old.pitch != pitch ||
+      old.yaw != yaw ||
+      old.roll != roll ||
       old.zoom != zoom;
 }
 

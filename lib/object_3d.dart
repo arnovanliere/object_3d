@@ -93,7 +93,7 @@ class _Object3DState extends State<Object3D> {
     final lines = obj.split("\n");
     for (String line in lines) {
       const _space = " ";
-      line = line.replaceAll(RegExp(r"s+"), _space);
+      line = line.replaceAll(RegExp(r"\s+"), _space);
 
       // Split into tokens and drop empty tokens
       List<String> chars =

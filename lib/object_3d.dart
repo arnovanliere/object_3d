@@ -65,11 +65,8 @@ class _Object3DState extends State<Object3D> {
         final double sx = _deltaX < 0 ? -1 : 1;
         final double sy = _deltaY < 0 ? -1 : 1;
 
-        _deltaX = math.min(maxSpeed, adx) * sx;
-        _deltaY = math.min(maxSpeed, ady) * sy;
-
-        _deltaX *= dampCoef;
-        _deltaY *= dampCoef;
+        _deltaX = math.min(maxSpeed, adx) * sx * dampCoef;
+        _deltaY = math.min(maxSpeed, ady) * sy * dampCoef;
 
         _yaw = _yaw - _deltaX;
         _pitch = _pitch - _deltaY;

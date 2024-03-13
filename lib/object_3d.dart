@@ -96,27 +96,25 @@ class _Object3DState extends State<Object3D> {
       line = line.replaceAll(RegExp(r"\s+"), _space);
 
       // Split into tokens and drop empty tokens
-      List<String> chars =
-          line.split(_space).skipWhile((v) => v.isEmpty).toList();
+      final List<String> chars =
+          line.split(_space).where((v) => v.isNotEmpty).toList(growable: false);
 
-      try {
-        if (chars[0] == "v") {
-          vertices.add(
-            Vector3(
-              double.parse(chars[1]),
-              double.parse(chars[2]),
-              double.parse(chars[3]),
-            ),
-          );
-        } else if (chars[0] == "f") {
-          List<int> face = [];
-          for (int i = 1; i < chars.length; i++) {
-            face.add(int.parse(chars[i].split("/")[0]));
-          }
-          faces.add(face);
+      if (chars.isEmpty) continue;
+
+      if (chars[0] == "v") {
+        vertices.add(
+          Vector3(
+            double.parse(chars[1]),
+            double.parse(chars[2]),
+            double.parse(chars[3]),
+          ),
+        );
+      } else if (chars[0] == "f") {
+        List<int> face = [];
+        for (int i = 1; i < chars.length; i++) {
+          face.add(int.parse(chars[i].split("/")[0]));
         }
-      } catch (e) {
-        print(e);
+        faces.add(face);
       }
     }
     setState(() {

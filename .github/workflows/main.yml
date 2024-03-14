@@ -25,12 +25,11 @@ jobs:
       - name: Activate dart_code_metrics
         run: flutter pub global activate dart_code_metrics
 
-      - name: Update PATH
-        run: echo "::add-path::$HOME/.pub-cache/bin"  # Add dart_code_metrics to PATH
+      - name: Create environment file
+        run: echo "PATH=$HOME/.pub-cache/bin:$PATH" >> $GITHUB_ENV
 
       - name: Run code metrics
-        run: |
-          dart_code_metrics lib -r codeclimate > gh-code-quality-report.json
+        run: dart_code_metrics lib -r codeclimate > gh-code-quality-report.json
         env:
           PATH: ${{ runner.tool_cache }}/dart/2.18.2/bin:${{ env.PATH }}
 

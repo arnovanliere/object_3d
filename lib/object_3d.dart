@@ -11,10 +11,12 @@ import 'package:vector_math/vector_math.dart' as v;
 
 typedef Face FaceColorFunc(Face face);
 
+/// Represents a face (3 vertices) with color data
 class Face {
-  Vector3 v1, v2, v3;
+  Vector3 _v1, _v2, _v3;
+  Vector3? _cachedNormal;
   Color c1 = Colors.white, c2 = Colors.white, c3 = Colors.white;
-  Face(this.v1, this.v2, this.v3);
+  Face(this._v1, this._v2, this._v3);
 
   void setColors(Color c1, Color c2, Color c3) {
     this.c1 = c1;
@@ -22,11 +24,45 @@ class Face {
     this.c3 = c3;
   }
 
-  /// Calculate the unit normal vector of a face.
+  /// getters
+  Vector3 get v1 {
+    return _v1;
+  }
+
+  Vector3 get v2 {
+    return _v2;
+  }
+
+  Vector3 get v3 {
+    return _v1;
+  }
+
+  /// setters - invalidate normal cache
+  set v1(Vector3 v) {
+    _cachedNormal = null;
+    _v1 = v;
+  }
+
+  set v2(Vector3 v) {
+    _cachedNormal = null;
+    _v2 = v;
+  }
+
+  set v3(Vector3 v) {
+    _cachedNormal = null;
+    _v3 = v;
+  }
+
+  /// Calculate the unit normal vector of a face and cache the result
   Vector3 get normal {
-    final Vector3 p = Vector3.copy(v2)..sub(v1);
-    final Vector3 q = Vector3.copy(v2)..sub(v3);
-    return p.cross(q).normalized();
+    if (_cachedNormal != null) return Vector3.copy(_cachedNormal!);
+
+    // Normal needs recalculating
+    final Vector3 p = Vector3.copy(_v2)..sub(_v1);
+    final Vector3 q = Vector3.copy(_v2)..sub(_v3);
+    _cachedNormal = p.cross(q).normalized();
+
+    return Vector3.copy(_cachedNormal!);
   }
 }
 

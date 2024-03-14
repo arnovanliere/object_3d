@@ -1,5 +1,5 @@
 name: object_3d
-description: Simple Flutter renderer for .obj files
+description: Simple Flutter renderer for .obj files with options to render custom colors.
 version: 0.0.1
 homepage: https://github.com/arnovanliere/object_3d
 
@@ -11,3 +11,6 @@ dependencies:
   flutter:
     sdk: flutter
   vector_math: ^2.1.2
+
+dev_dependencies:
+  flutter_lints: ^3.0.1

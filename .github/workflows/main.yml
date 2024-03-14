@@ -26,10 +26,13 @@ jobs:
         run: flutter pub global activate dart_code_metrics
 
       - name: Update PATH
-        run: export PATH="$PATH":"$HOME/.pub-cache/bin"
+        run: echo "::add-path::$HOME/.pub-cache/bin"  # Add dart_code_metrics to PATH
 
       - name: Run code metrics
-        run: metrics lib -r codeclimate > gh-code-quality-report.json
+        run: |
+          dart_code_metrics lib -r codeclimate > gh-code-quality-report.json
+        env:
+          PATH: ${{ runner.tool_cache }}/dart/2.18.2/bin:${{ env.PATH }}
 
       - name: Upload code quality report
         uses: actions/upload-artifact@v2

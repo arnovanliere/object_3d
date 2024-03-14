@@ -34,12 +34,6 @@ jobs:
           name: code-quality-report
           path: gh-code-quality-report.json
 
-      - name: Upload code quality report
-        uses: actions/upload-artifact@v2
-        with:
-          name: code-quality-report
-          path: gh-code-quality-report.json
-
   analyze:
     name: Analyze
     runs-on: ubuntu-latest

@@ -9,6 +9,27 @@ import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math.dart' show Vector3;
 import 'package:vector_math/vector_math.dart' as v;
 
+typedef Face FaceColorFunc(Face face);
+
+class Face {
+  Vector3 v1, v2, v3;
+  Color c1 = Colors.white, c2 = Colors.white, c3 = Colors.white;
+  Face(this.v1, this.v2, this.v3);
+
+  void setColors(Color c1, Color c2, Color c3) {
+    this.c1 = c1;
+    this.c2 = c2;
+    this.c3 = c3;
+  }
+
+  /// Calculate the unit normal vector of a face.
+  Vector3 get normal {
+    final Vector3 p = Vector3.copy(v2)..sub(v1);
+    final Vector3 q = Vector3.copy(v2)..sub(v3);
+    return p.cross(q).normalized();
+  }
+}
+
 class Object3D extends StatefulWidget {
   const Object3D({
     super.key,
@@ -21,10 +42,17 @@ class Object3D extends StatefulWidget {
     this.maxSpeed = 10.0,
     this.reversePitch = true,
     this.reverseYaw = false,
+    this.faceColorFunc,
   })  : assert(object != null || path != null,
             'You must provide an object or a path'),
         assert(object == null || path == null,
-            'You must provide an object or a path, not both');
+            'You must provide an object or a path, not both'),
+        assert(swipeCoef > 0,
+            "Parameter swipeCoef must be a positive, non-zero real number."),
+        assert(dampCoef >= 0.001 && dampCoef <= 0.999,
+            "Parameter dampCoef must be in the range [0.001, 0.999]."),
+        assert(maxSpeed > 0,
+            "Parameter maxSpeed must be positive, non-zero real number.");
 
   final Size size;
   final String? path;
@@ -35,6 +63,7 @@ class Object3D extends StatefulWidget {
   final double maxSpeed; // in rots per 16 ms
   final bool reversePitch; // if true, rotation direction is flipped for pitch
   final bool reverseYaw; // if true, rotation direction is flipped for yaw
+  final FaceColorFunc? faceColorFunc; // If unset, uses _defaultFaceColor()
 
   @override
   State<Object3D> createState() => _Object3DState();
@@ -57,13 +86,6 @@ class _Object3DState extends State<Object3D> {
       // Load the object from a string
       _parseObj(widget.object!);
     }
-
-    assert(widget.swipeCoef > 0,
-        "Parameter swipeCoef must be a positive, non-zero real number.");
-    assert(widget.dampCoef >= 0.001 && widget.dampCoef <= 0.999,
-        "Parameter dampCoef must be in the range [0.001, 0.999].");
-    assert(widget.maxSpeed > 0,
-        "Parameter maxSpeed must be positive, non-zero real number.");
 
     _updateTimer = Timer.periodic(Duration(milliseconds: 16), (_) {
       if (!mounted) return;
@@ -154,15 +176,15 @@ class _Object3DState extends State<Object3D> {
       child: CustomPaint(
         size: widget.size,
         painter: _ObjectPainter(
-          size: widget.size,
-          pitch: _pitch,
-          yaw: _yaw,
-          roll: 0,
-          vertices: vertices,
-          color: widget.color,
-          faces: faces,
-          zoom: 200,
-        ),
+            size: widget.size,
+            pitch: _pitch,
+            yaw: _yaw,
+            roll: 0,
+            vertices: vertices,
+            color: widget.color,
+            faces: faces,
+            zoom: 200,
+            faceColorFunc: widget.faceColorFunc),
       ),
     );
   }
@@ -182,6 +204,8 @@ class _ObjectPainter extends CustomPainter {
   final camera = Vector3(0.0, 0.0, 0.0);
   final light = Vector3(0.0, 0.0, 100.0).normalized();
 
+  final FaceColorFunc? faceColorFunc;
+
   _ObjectPainter({
     required this.size,
     required this.pitch,
@@ -191,22 +215,8 @@ class _ObjectPainter extends CustomPainter {
     required this.color,
     required this.faces,
     required this.zoom,
+    this.faceColorFunc,
   });
-
-  /// Calculate the normal vector of a face.
-  Vector3 _normalVector3(Vector3 first, Vector3 second, Vector3 third) {
-    Vector3 secondFirst = Vector3.copy(second)..sub(first);
-    Vector3 secondThird = Vector3.copy(second)..sub(third);
-    return Vector3(
-        (secondFirst.y * secondThird.z) - (secondFirst.z * secondThird.y),
-        (secondFirst.z * secondThird.x) - (secondFirst.x * secondThird.z),
-        (secondFirst.x * secondThird.y) - (secondFirst.y * secondThird.x));
-  }
-
-  /// Multiply two vectors.
-  double _scalarMultiplication(Vector3 first, Vector3 second) {
-    return (first.x * second.x) + (first.y * second.y) + (first.z * second.z);
-  }
 
   /// Calculate the position of a vertex in the 3D space based
   /// on the angle of rotation, view-port position and zoom.
@@ -243,18 +253,10 @@ class _ObjectPainter extends CustomPainter {
     return coordinates;
   }
 
-  /// Calculate the normal vector of a face.
-  Vector3 _normalVector(List<Vector3> verticesToDraw, List<int> face) {
-    final first = verticesToDraw[face[0] - 1];
-    final second = verticesToDraw[face[1] - 1];
-    final third = verticesToDraw[face[2] - 1];
-    return _normalVector3(first, second, third).normalized();
-  }
-
   /// Calculate the color of a vertex based on the
   /// position of the vertex and the light.
-  List<Color> _calcColor(Color color, Vector3 normalVector) {
-    double s = _scalarMultiplication(normalVector, light);
+  Face _defaultFaceColor(Face face) {
+    double s = face.normal.dot(light);
     double coefficient = math.max(0, s);
     Color c = Color.fromRGBO(
       (color.red * coefficient).round(),
@@ -262,7 +264,8 @@ class _ObjectPainter extends CustomPainter {
       (color.blue * coefficient).round(),
       1,
     );
-    return [c, c, c];
+    face.setColors(c, c, c);
+    return face;
   }
 
   /// Order vertices by the distance to the camera.
@@ -296,10 +299,18 @@ class _ObjectPainter extends CustomPainter {
     List<Offset> offsets = [];
     List<Color> colors = [];
     for (int i = 0; i < faces.length; i++) {
-      List<int> face = faces[avgOfZ[i].index];
-      final n = _normalVector(verticesToDraw, face);
-      colors.addAll(_calcColor(color, n));
-      offsets.addAll(_drawFace(verticesToDraw, face));
+      final List<int> faceIdx = faces[avgOfZ[i].index];
+
+      // Fallback on default color func if a custom one is not provided
+      Face face = Face(verticesToDraw[faceIdx[0] - 1],
+          verticesToDraw[faceIdx[1] - 1], verticesToDraw[faceIdx[2] - 1]);
+
+      face = faceColorFunc == null
+          ? _defaultFaceColor(face)
+          : faceColorFunc!(face);
+
+      colors.addAll([face.c1, face.c2, face.c3]);
+      offsets.addAll(_drawFace(verticesToDraw, faceIdx));
     }
 
     // Draw the vertices.

@@ -1,0 +1,15 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    # workaround for https://github.com/dart-lang/sdk/issues/42910
+    - 'example/**'
+
+linter:
+  # https://dart-lang.github.io/linter/lints/index.html.
+  rules:
+    prefer_single_quotes: true
+    require_trailing_commas: true
+    prefer_final_locals: true
+    prefer_final_in_for_each: true
+    use_build_context_synchronously: true

@@ -1,0 +1,67 @@
+name: Flutter CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    container:
+      image: cirruslabs/flutter:stable
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Activate dart_code_metrics
+        run: flutter pub global activate dart_code_metrics
+
+      - name: Run code metrics
+        run: metrics lib -r codeclimate > gh-code-quality-report.json
+
+      - name: Upload code quality report
+        uses: actions/upload-artifact@v2
+        with:
+          name: code-quality-report
+          path: gh-code-quality-report.json
+
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    container:
+      image: cirruslabs/flutter:stable
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Run Dart analyze
+        run: dart analyze --fatal-infos
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    container:
+      image: cirruslabs/flutter:stable
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Run Dart format
+        run: dart format . -o none --set-exit-if-changed

@@ -1,13 +1,13 @@
 library object_3d;
 
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:vector_math/vector_math.dart' show Vector3;
 import 'package:vector_math/vector_math.dart' as v;
+import 'package:vector_math/vector_math.dart' show Vector3;
 
 class Object3D extends StatefulWidget {
   const Object3D({
@@ -21,10 +21,14 @@ class Object3D extends StatefulWidget {
     this.maxSpeed = 10.0,
     this.reversePitch = true,
     this.reverseYaw = false,
-  })  : assert(object != null || path != null,
-            'You must provide an object or a path'),
-        assert(object == null || path == null,
-            'You must provide an object or a path, not both');
+  })  : assert(
+          object != null || path != null,
+          'You must provide an object or a path',
+        ),
+        assert(
+          object == null || path == null,
+          'You must provide an object or a path, not both',
+        );
 
   final Size size;
   final String? path;
@@ -58,14 +62,20 @@ class _Object3DState extends State<Object3D> {
       _parseObj(widget.object!);
     }
 
-    assert(widget.swipeCoef > 0,
-        "Parameter swipeCoef must be a positive, non-zero real number.");
-    assert(widget.dampCoef >= 0.001 && widget.dampCoef <= 0.999,
-        "Parameter dampCoef must be in the range [0.001, 0.999].");
-    assert(widget.maxSpeed > 0,
-        "Parameter maxSpeed must be positive, non-zero real number.");
+    assert(
+      widget.swipeCoef > 0,
+      'Parameter swipeCoef must be a positive, non-zero real number.',
+    );
+    assert(
+      widget.dampCoef >= 0.001 && widget.dampCoef <= 0.999,
+      'Parameter dampCoef must be in the range [0.001, 0.999].',
+    );
+    assert(
+      widget.maxSpeed > 0,
+      'Parameter maxSpeed must be positive, non-zero real number.',
+    );
 
-    _updateTimer = Timer.periodic(Duration(milliseconds: 16), (_) {
+    _updateTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
       if (!mounted) return;
       setState(() {
         final adx = _deltaX.abs();
@@ -92,12 +102,12 @@ class _Object3DState extends State<Object3D> {
 
   /// Parse the object file.
   void _parseObj(String obj) {
-    List<Vector3> vertices = [];
-    List<List<int>> faces = [];
-    final lines = obj.split("\n");
+    final List<Vector3> vertices = [];
+    final List<List<int>> faces = [];
+    final lines = obj.split('\n');
     for (String line in lines) {
-      const space = " ";
-      line = line.replaceAll(RegExp(r"\s+"), space);
+      const space = ' ';
+      line = line.replaceAll(RegExp(r'\s+'), space);
 
       // Split into tokens and drop empty tokens
       final List<String> chars =
@@ -105,7 +115,7 @@ class _Object3DState extends State<Object3D> {
 
       if (chars.isEmpty) continue;
 
-      if (chars[0] == "v") {
+      if (chars[0] == 'v') {
         vertices.add(
           Vector3(
             double.parse(chars[1]),
@@ -113,10 +123,10 @@ class _Object3DState extends State<Object3D> {
             double.parse(chars[3]),
           ),
         );
-      } else if (chars[0] == "f") {
-        List<int> face = [];
+      } else if (chars[0] == 'f') {
+        final List<int> face = [];
         for (int i = 1; i < chars.length; i++) {
-          face.add(int.parse(chars[i].split("/")[0]));
+          face.add(int.parse(chars[i].split('/')[0]));
         }
         faces.add(face);
       }
@@ -195,12 +205,13 @@ class _ObjectPainter extends CustomPainter {
 
   /// Calculate the normal vector of a face.
   Vector3 _normalVector3(Vector3 first, Vector3 second, Vector3 third) {
-    Vector3 secondFirst = Vector3.copy(second)..sub(first);
-    Vector3 secondThird = Vector3.copy(second)..sub(third);
+    final Vector3 secondFirst = Vector3.copy(second)..sub(first);
+    final Vector3 secondThird = Vector3.copy(second)..sub(third);
     return Vector3(
-        (secondFirst.y * secondThird.z) - (secondFirst.z * secondThird.y),
-        (secondFirst.z * secondThird.x) - (secondFirst.x * secondThird.z),
-        (secondFirst.x * secondThird.y) - (secondFirst.y * secondThird.x));
+      (secondFirst.y * secondThird.z) - (secondFirst.z * secondThird.y),
+      (secondFirst.z * secondThird.x) - (secondFirst.x * secondThird.z),
+      (secondFirst.x * secondThird.y) - (secondFirst.y * secondThird.x),
+    );
   }
 
   /// Multiply two vectors.
@@ -226,7 +237,7 @@ class _ObjectPainter extends CustomPainter {
 
   /// Calculate the 2D-positions of a vertex in the 3D space.
   List<Offset> _drawFace(List<Vector3> vertices, List<int> face) {
-    List<Offset> coordinates = [];
+    final List<Offset> coordinates = [];
     for (int i = 0; i < face.length; i++) {
       double x, y;
       if (i < face.length - 1) {
@@ -254,9 +265,9 @@ class _ObjectPainter extends CustomPainter {
   /// Calculate the color of a vertex based on the
   /// position of the vertex and the light.
   List<Color> _calcColor(Color color, Vector3 normalVector) {
-    double s = _scalarMultiplication(normalVector, light);
-    double coefficient = math.max(0, s);
-    Color c = Color.fromRGBO(
+    final double s = _scalarMultiplication(normalVector, light);
+    final double coefficient = math.max(0, s);
+    final Color c = Color.fromRGBO(
       (color.red * coefficient).round(),
       (color.green * coefficient).round(),
       (color.blue * coefficient).round(),
@@ -283,7 +294,7 @@ class _ObjectPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Calculate the position of the vertices in the 3D space.
-    List<Vector3> verticesToDraw = [];
+    final List<Vector3> verticesToDraw = [];
     for (final vertex in vertices) {
       final defV = _calcVertex(Vector3.copy(vertex));
       verticesToDraw.add(defV);
@@ -293,17 +304,17 @@ class _ObjectPainter extends CustomPainter {
 
     // Calculate the position of the vertices in the 2D space
     // and calculate the colors of the vertices.
-    List<Offset> offsets = [];
-    List<Color> colors = [];
+    final List<Offset> offsets = [];
+    final List<Color> colors = [];
     for (int i = 0; i < faces.length; i++) {
-      List<int> face = faces[avgOfZ[i].index];
+      final List<int> face = faces[avgOfZ[i].index];
       final n = _normalVector(verticesToDraw, face);
       colors.addAll(_calcColor(color, n));
       offsets.addAll(_drawFace(verticesToDraw, face));
     }
 
     // Draw the vertices.
-    Paint paint = Paint();
+    final Paint paint = Paint();
     paint.style = PaintingStyle.fill;
     paint.color = color;
     final v = Vertices(VertexMode.triangles, offsets, colors: colors);

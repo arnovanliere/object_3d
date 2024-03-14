@@ -6,7 +6,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:vector_math/vector_math.dart' as v;
+import 'package:vector_math/vector_math.dart' as vmath;
 import 'package:vector_math/vector_math.dart' show Vector3;
 
 class Object3D extends StatefulWidget {
@@ -48,8 +48,8 @@ class _Object3DState extends State<Object3D> {
   double _pitch = 15.0, _yaw = 45.0;
   double? _previousX, _previousY;
   double _deltaX = 0.0, _deltaY = 0.0;
-  List<Vector3> vertices = [];
-  List<List<int>> faces = [];
+  List<Vector3> vertices = <vmath.Vector3>[];
+  List<List<int>> faces = <List<int>>[];
   late Timer _updateTimer;
 
   @override
@@ -102,16 +102,18 @@ class _Object3DState extends State<Object3D> {
 
   /// Parse the object file.
   void _parseObj(String obj) {
-    final List<Vector3> vertices = [];
-    final List<List<int>> faces = [];
+    final vertices = <vmath.Vector3>[];
+    final faces = <List<int>>[];
     final lines = obj.split('\n');
-    for (String line in lines) {
+    for (var line in lines) {
       const space = ' ';
       line = line.replaceAll(RegExp(r'\s+'), space);
 
       // Split into tokens and drop empty tokens
-      final List<String> chars =
-          line.split(space).where((v) => v.isNotEmpty).toList(growable: false);
+      final chars = line
+          .split(space)
+          .where((v) => v.isNotEmpty)
+          .toList(growable: false);
 
       if (chars.isEmpty) continue;
 
@@ -124,8 +126,8 @@ class _Object3DState extends State<Object3D> {
           ),
         );
       } else if (chars[0] == 'f') {
-        final List<int> face = [];
-        for (int i = 1; i < chars.length; i++) {
+        final face = <int>[];
+        for (var i = 1; i < chars.length; i++) {
           face.add(int.parse(chars[i].split('/')[0]));
         }
         faces.add(face);
@@ -189,8 +191,8 @@ class _ObjectPainter extends CustomPainter {
   final List<Vector3> vertices;
   final List<List<int>> faces;
 
-  final camera = Vector3(0.0, 0.0, 0.0);
-  final light = Vector3(0.0, 0.0, 100.0).normalized();
+  final vmath.Vector3 camera = Vector3(0.0, 0.0, 0.0);
+  final vmath.Vector3 light = Vector3(0.0, 0.0, 100.0).normalized();
 
   _ObjectPainter({
     required this.size,
@@ -205,8 +207,8 @@ class _ObjectPainter extends CustomPainter {
 
   /// Calculate the normal vector of a face.
   Vector3 _normalVector3(Vector3 first, Vector3 second, Vector3 third) {
-    final Vector3 secondFirst = Vector3.copy(second)..sub(first);
-    final Vector3 secondThird = Vector3.copy(second)..sub(third);
+    final secondFirst = Vector3.copy(second)..sub(first);
+    final secondThird = Vector3.copy(second)..sub(third);
     return Vector3(
       (secondFirst.y * secondThird.z) - (secondFirst.z * secondThird.y),
       (secondFirst.z * secondThird.x) - (secondFirst.x * secondThird.z),
@@ -222,7 +224,8 @@ class _ObjectPainter extends CustomPainter {
   /// Calculate the position of a vertex in the 3D space based
   /// on the angle of rotation, view-port position and zoom.
   Vector3 _calcVertex(Vector3 vertex) {
-    final t = v.Matrix4.translationValues(_viewPortX, _viewPortY, 0);
+    final t =
+        vmath.Matrix4.translationValues(_viewPortX, _viewPortY, 0);
     t.scale(zoom, -zoom);
     t.rotateX(_degreeToRadian(pitch));
     t.rotateY(_degreeToRadian(yaw));
@@ -237,8 +240,8 @@ class _ObjectPainter extends CustomPainter {
 
   /// Calculate the 2D-positions of a vertex in the 3D space.
   List<Offset> _drawFace(List<Vector3> vertices, List<int> face) {
-    final List<Offset> coordinates = [];
-    for (int i = 0; i < face.length; i++) {
+    final coordinates = <Offset>[];
+    for (var i = 0; i < face.length; i++) {
       double x, y;
       if (i < face.length - 1) {
         final iV = vertices[face[i + 1] - 1];
@@ -265,23 +268,23 @@ class _ObjectPainter extends CustomPainter {
   /// Calculate the color of a vertex based on the
   /// position of the vertex and the light.
   List<Color> _calcColor(Color color, Vector3 normalVector) {
-    final double s = _scalarMultiplication(normalVector, light);
+    final s = _scalarMultiplication(normalVector, light);
     final double coefficient = math.max(0, s);
-    final Color c = Color.fromRGBO(
+    final c = Color.fromRGBO(
       (color.red * coefficient).round(),
       (color.green * coefficient).round(),
       (color.blue * coefficient).round(),
       1,
     );
-    return [c, c, c];
+    return <Color>[c, c, c];
   }
 
   /// Order vertices by the distance to the camera.
   List<AvgZ> _sortVertices(List<Vector3> vertices) {
-    final List<AvgZ> avgOfZ = [];
-    for (int i = 0; i < faces.length; i++) {
+    final avgOfZ = <AvgZ>[];
+    for (var i = 0; i < faces.length; i++) {
       final face = faces[i];
-      double z = 0.0;
+      var z = 0.0;
       for (final i in face) {
         z += vertices[i - 1].z;
       }
@@ -294,7 +297,7 @@ class _ObjectPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Calculate the position of the vertices in the 3D space.
-    final List<Vector3> verticesToDraw = [];
+    final verticesToDraw = <vmath.Vector3>[];
     for (final vertex in vertices) {
       final defV = _calcVertex(Vector3.copy(vertex));
       verticesToDraw.add(defV);
@@ -304,17 +307,17 @@ class _ObjectPainter extends CustomPainter {
 
     // Calculate the position of the vertices in the 2D space
     // and calculate the colors of the vertices.
-    final List<Offset> offsets = [];
-    final List<Color> colors = [];
-    for (int i = 0; i < faces.length; i++) {
-      final List<int> face = faces[avgOfZ[i].index];
+    final offsets = <Offset>[];
+    final colors = <Color>[];
+    for (var i = 0; i < faces.length; i++) {
+      final face = faces[avgOfZ[i].index];
       final n = _normalVector(verticesToDraw, face);
       colors.addAll(_calcColor(color, n));
       offsets.addAll(_drawFace(verticesToDraw, face));
     }
 
     // Draw the vertices.
-    final Paint paint = Paint();
+    final paint = Paint();
     paint.style = PaintingStyle.fill;
     paint.color = color;
     final v = Vertices(VertexMode.triangles, offsets, colors: colors);

@@ -25,6 +25,9 @@ jobs:
       - name: Activate dart_code_metrics
         run: flutter pub global activate dart_code_metrics
 
+      - name: Update PATH
+        run: export PATH="$PATH":"$HOME/.pub-cache/bin"
+
       - name: Run code metrics
         run: metrics lib -r codeclimate > gh-code-quality-report.json
 

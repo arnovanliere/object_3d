@@ -110,10 +110,8 @@ class _Object3DState extends State<Object3D> {
       line = line.replaceAll(RegExp(r'\s+'), space);
 
       // Split into tokens and drop empty tokens
-      final chars = line
-          .split(space)
-          .where((v) => v.isNotEmpty)
-          .toList(growable: false);
+      final chars =
+          line.split(space).where((v) => v.isNotEmpty).toList(growable: false);
 
       if (chars.isEmpty) continue;
 
@@ -224,8 +222,7 @@ class _ObjectPainter extends CustomPainter {
   /// Calculate the position of a vertex in the 3D space based
   /// on the angle of rotation, view-port position and zoom.
   Vector3 _calcVertex(Vector3 vertex) {
-    final t =
-        vmath.Matrix4.translationValues(_viewPortX, _viewPortY, 0);
+    final t = vmath.Matrix4.translationValues(_viewPortX, _viewPortY, 0);
     t.scale(zoom, -zoom);
     t.rotateX(_degreeToRadian(pitch));
     t.rotateY(_degreeToRadian(yaw));

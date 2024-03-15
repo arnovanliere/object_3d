@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'package:vector_math/vector_math.dart' show Vector3;
+import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:object_3d/object_3d.dart';
 
 void main() {

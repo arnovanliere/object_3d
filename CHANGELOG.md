@@ -1,4 +1,4 @@
-# 1.0.0 (Not Released)
+# 1.0.0 (March 28, 2024)
 - More precise gesture control (https://github.com/arnovanliere/object_3d/pull/2).
 - Add custom face color calculation function (https://github.com/arnovanliere/object_3d/pull/3).
 
